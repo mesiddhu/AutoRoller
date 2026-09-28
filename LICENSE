@@ -1,0 +1,62 @@
+AutoRoller Proprietary Licence
+
+Copyright (c) 2026 Siddharth S S (SS TechHub). All rights reserved.
+
+1. Ownership
+
+This repository and everything in it, including source code, scripts,
+3D models, designs, drawings, images, documentation and data (together,
+"the Materials"), are the property of the copyright holder named above,
+except for the third-party components listed in section 6.
+
+2. No licence granted
+
+No licence or right to use, copy, modify, merge, publish, distribute,
+sublicense, sell, or create derivative works from the Materials is granted,
+whether expressly, by implication, or otherwise, except as stated in
+section 3.
+
+3. Permitted use
+
+If this repository is made publicly visible on GitHub, you may view the
+Materials and fork the repository on GitHub only to the extent required by
+the GitHub Terms of Service. This does not permit any other use, including
+running, modifying, redistributing, or using the Materials in any product,
+service, competition entry, publication, or patent application.
+
+Any other use requires prior written permission from the copyright holder.
+
+4. Patents
+
+The Materials relate to subject matter described in Indian Patent
+Application No. 202641087562 A and possibly other applications. Nothing in
+this licence or in this repository grants any licence or right under any
+patent or patent application, whether expressly, by implication,
+estoppel, or otherwise.
+
+5. Confidential design information
+
+Viewing the Materials does not give you any right to use the ideas,
+designs, or technical information they contain.
+
+6. Third-party components
+
+The following third-party software is included under its own licence and
+is not covered by sections 1 to 5:
+
+  three.js (https://threejs.org)
+  Copyright (c) 2010-2021 three.js authors
+  MIT License. Full text in:
+  viewer/src/autoroller_viewer/static/vendor/THREEJS_LICENSE.txt
+
+7. No warranty
+
+THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL
+THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY
+ARISING FROM, OUT OF, OR IN CONNECTION WITH THE MATERIALS OR THEIR USE.
+
+8. Contact
+
+For permission requests, write to: [your email]
