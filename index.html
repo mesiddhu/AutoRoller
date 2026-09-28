@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AutoRoller exterior model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600&display=swap" rel="stylesheet">
+<style>
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --scene: #dde6ee;
+  --ink: #16263b;
+  --muted: #4d5d72;
+  --surface: rgba(248, 250, 252, 0.94);
+  --line: #c6d1dc;
+  --accent: #2f5e8c;
+  --accent-ink: #ffffff;
+  --signal: #c93a28;
+  --label-bg: rgba(255, 255, 255, 0.95);
+  --font: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --font-title: "Barlow Condensed", "Arial Narrow", "Barlow", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --scene: #16212f;
+    --ink: #e5ecf4;
+    --muted: #a3b3c6;
+    --surface: rgba(22, 32, 46, 0.93);
+    --line: #30425a;
+    --accent: #84b3e2;
+    --accent-ink: #0f1a27;
+    --label-bg: rgba(22, 32, 46, 0.95);
+  }
+}
+:root[data-theme="dark"] {
+  --scene: #16212f;
+  --ink: #e5ecf4;
+  --muted: #a3b3c6;
+  --surface: rgba(22, 32, 46, 0.93);
+  --line: #30425a;
+  --accent: #84b3e2;
+  --accent-ink: #0f1a27;
+  --label-bg: rgba(22, 32, 46, 0.95);
+}
+*, *::before, *::after { box-sizing: inherit; }
+html, body { height: 100%; margin: 0; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  background: var(--scene);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  overflow: hidden;
+}
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+#labels { position: fixed; inset: 0; pointer-events: none; }
+.label {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  background: var(--label-bg);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.label::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 1px;
+  height: 8px;
+  background: var(--muted);
+}
+.label.is-selected { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+body.no-labels #labels { display: none; }
+
+#controls {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  left: 16px;
+  width: min(300px, calc(100vw - 32px));
+  max-height: calc(100% - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px 18px 16px;
+  backdrop-filter: blur(6px);
+}
+body.ui-hidden #controls { display: none; }
+h1 {
+  font-family: var(--font-title);
+  font-weight: 600;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  margin: 0 0 6px;
+}
+.intro { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+h2 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; }
+.parts { list-style: none; margin: 0; padding: 0; }
+.parts button {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-left: 3px solid transparent;
+  color: var(--ink);
+  font: inherit;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+.parts button:hover { border-left-color: var(--line); }
+.parts button[aria-pressed="true"] { border-left-color: var(--accent); font-weight: 600; }
+#part-info { margin: 8px 0 0; padding: 10px 12px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 12%, transparent); font-size: 14px; }
+#part-info[hidden] { display: none; }
+.views { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.btn {
+  font: inherit;
+  font-size: 14px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); width: 100%; margin-top: 14px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0; font-size: 14px; }
+.row input[type="range"] { flex: 1; accent-color: var(--accent); }
+.row output { min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
+.check { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 14px; cursor: pointer; }
+.check input { accent-color: var(--accent); width: 16px; height: 16px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.note { margin: 12px 0 0; font-size: 12.5px; color: var(--muted); }
+
+#show-ui {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  right: 12px;
+  opacity: 0.35;
+  display: none;
+}
+#show-ui:hover, #show-ui:focus-visible { opacity: 1; }
+body.ui-hidden #show-ui { display: block; }
+
+#load-error {
+  position: fixed; inset: 0; display: none; place-items: center; padding: 24px; text-align: center;
+}
+body.failed #load-error { display: grid; }
+
+@media (max-width: 640px) {
+  #controls {
+    top: auto;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    left: 12px;
+    width: calc(100vw - 24px);
+    max-height: 46%;
+  }
+  h1 { font-size: 28px; }
+}
+</style>
+</head>
+<body>
+<div id="stage" aria-label="3D view of AutoRoller on a rooftop solar panel"></div>
+<div id="labels"></div>
+
+<aside id="controls">
+  <h1>AutoRoller</h1>
+  <p class="intro">Exterior concept model on a rooftop panel. Drag to rotate, scroll or pinch to zoom, right-drag to pan.</p>
+
+  <h2>Parts</h2>
+  <ul class="parts" id="parts"></ul>
+  <p id="part-info" hidden></p>
+
+  <h2>Views</h2>
+  <div class="views">
+    <button class="btn" data-view="hero">Overview</button>
+    <button class="btn" data-view="close">Top edge</button>
+    <button class="btn" data-view="side">Side</button>
+    <button class="btn" data-view="back">Rear</button>
+  </div>
+
+  <h2>Display</h2>
+  <div class="row">
+    <label for="tilt">Panel tilt</label>
+    <input id="tilt" type="range" min="5" max="35" step="1" value="15">
+    <output id="tilt-out" for="tilt">15°</output>
+  </div>
+  <label class="check"><input type="checkbox" id="opt-labels" checked> Part labels</label>
+  <label class="check"><input type="checkbox" id="opt-plain"> Plain white background (for slides)</label>
+  <label class="check"><input type="checkbox" id="opt-spin"> Turntable spin</label>
+
+  <button class="btn btn-primary" id="hide-ui">Hide controls for screenshot</button>
+  <p class="note">Press H to show or hide controls. Model uses a standard 1722 × 1134 mm panel in portrait.</p>
+</aside>
+
+<button class="btn" id="show-ui">Show controls</button>
+<div id="load-error"><p>The 3D viewer couldn't load its graphics library. Check your connection and reload the page.</p></div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script>
+(function () {
+  if (!window.THREE || !THREE.OrbitControls) { document.body.classList.add("failed"); return; }
+
+  // ---------- dimensions (metres), same as the Blender script ----------
+  const W = 1.134, L = 1.722, FW = 0.03, FH = 0.035, FT = 0.004, FB = FT - FH, H0 = 0.35;
+  const HY = L + 0.062, HZ = 0.020;
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------- renderer / scene ----------
+  const stage = document.getElementById("stage");
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  stage.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 50);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 0.4;
+  controls.maxDistance = 8;
+  controls.maxPolarAngle = Math.PI * 0.49;
+  controls.autoRotateSpeed = 0.8;
+
+  scene.add(new THREE.HemisphereLight(0xf2f6ff, 0x8a8478, 0.75));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.95);
+  sun.position.set(2.5, 4.0, 2.0);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -2.5, right: 2.5, top: 2.5, bottom: -2.5, near: 0.5, far: 12 });
+  sun.shadow.bias = -0.0005;
+  scene.add(sun);
+
+  // Build in Z-up coordinates (like Blender), then turn the whole world to Y-up.
+  const world = new THREE.Group();
+  world.rotation.x = -Math.PI / 2;
+  scene.add(world);
+  const rig = new THREE.Group();
+  rig.position.set(0, 0, H0);
+  world.add(rig);
+
+  // ---------- materials ----------
+  const std = (color, o) => new THREE.MeshStandardMaterial(Object.assign({ color }, o || {}));
+  const M = {
+    alu: std(0xc9cdd1, { metalness: 0.75, roughness: 0.35 }),
+    cell: std(0x1b3a70, { metalness: 0.35, roughness: 0.18 }),
+    back: std(0xecece9, { roughness: 0.6 }),
+    housing: std(0xf3f3f0, { roughness: 0.38 }),
+    cap: std(0x2f5e8c, { roughness: 0.42 }),
+    dark: std(0x141518, { roughness: 0.5 }),
+    cable: std(0x0c0c0d, { roughness: 0.6 }),
+    steel: std(0x8e9297, { metalness: 0.8, roughness: 0.45 }),
+    roof: std(0xb8b5ad, { roughness: 0.95 }),
+    led: std(0x22dd55, { emissive: 0x22dd55, emissiveIntensity: 0.9 }),
+    button: std(0xd23b2a, { roughness: 0.4 })
+  };
+
+  // ---------- geometry helpers ----------
+  function rbox(sx, sy, sz, r) {
+    if (!r) return new THREE.BoxGeometry(sx, sy, sz);
+    r = Math.min(r, sx / 2 - 1e-4, sy / 2 - 1e-4, sz / 2 - 1e-4);
+    const w = sx - 2 * r, h = sy - 2 * r, d = sz - 2 * r;
+    const s = new THREE.Shape();
+    s.moveTo(-w / 2, -h / 2); s.lineTo(w / 2, -h / 2); s.lineTo(w / 2, h / 2); s.lineTo(-w / 2, h / 2); s.lineTo(-w / 2, -h / 2);
+    const g = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: true, bevelThickness: r, bevelSize: r, bevelSegments: 5, curveSegments: 4 });
+    g.translate(0, 0, -d / 2);
+    return g;
+  }
+  function mesh(geo, mat, pos, parent) {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(pos[0], pos[1], pos[2]);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    (parent || rig).add(m);
+    return m;
+  }
+  function box(size, pos, mat, r, parent) { return mesh(rbox(size[0], size[1], size[2], r || 0), mat, pos, parent); }
+  function cyl(radius, depth, pos, mat) {
+    const g = new THREE.CylinderGeometry(radius, radius, depth, 32);
+    g.rotateX(Math.PI / 2);                                  // axis along local Z (up)
+    return mesh(g, mat, pos);
+  }
+  function cable(points, radius) {
+    const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(p[0], p[1], p[2])));
+    return mesh(new THREE.TubeGeometry(curve, 64, radius, 8, false), M.cable, [0, 0, 0]);
+  }
+
+  // ---------- panel ----------
+  const fz = (FT + FB) / 2;
+  const panelMeshes = [
+    box([W, FW, FH], [0, L - FW / 2, fz], M.alu),
+    box([W, FW, FH], [0, FW / 2, fz], M.alu),
+    box([FW, L - 2 * FW, FH], [W / 2 - FW / 2, L / 2, fz], M.alu),
+    box([FW, L - 2 * FW, FH], [-W / 2 + FW / 2, L / 2, fz], M.alu),
+    box([W - 2 * FW, L - 2 * FW, 0.004], [0, L / 2, -0.012], M.back)
+  ];
+  const cols = 6, rows = 10;
+  const innerW = W - 2 * FW - 0.04, innerL = L - 2 * FW - 0.06;
+  const px = innerW / cols, py = innerL / rows;
+  const cells = new THREE.InstancedMesh(new THREE.BoxGeometry(px - 0.006, py - 0.006, 0.003), M.cell, cols * rows);
+  const tmp = new THREE.Object3D();
+  let k = 0;
+  for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) {
+    tmp.position.set(-innerW / 2 + px * (c + 0.5), FW + 0.03 + py * (r + 0.5), -0.0055);
+    tmp.updateMatrix();
+    cells.setMatrixAt(k++, tmp.matrix);
+  }
+  cells.receiveShadow = true;
+  rig.add(cells);
+  panelMeshes.push(cells);
+  panelMeshes.push(box([0.12, 0.10, 0.025], [0, L - 0.22, -0.0265], M.dark, 0.004));
+  const railZ = FB - 0.02;
+  panelMeshes.push(box([0.04, L - 0.1, 0.04], [-0.35, L / 2, railZ], M.alu));
+  panelMeshes.push(box([0.04, L - 0.1, 0.04], [0.35, L / 2, railZ], M.alu));
+
+  // ---------- AutoRoller unit (exterior only) ----------
+  const housing = box([1.06, 0.10, 0.09], [0, HY, HZ], M.housing, 0.03);
+  const driveCap = box([0.08, 0.12, 0.11], [0.57, HY, HZ], M.cap, 0.018);
+  const endCap = box([0.05, 0.11, 0.10], [-0.555, HY, HZ], M.cap, 0.015);
+  const capTop = HZ + 0.055;
+  const button = cyl(0.012, 0.008, [0.57, HY + 0.02, capTop + 0.003], M.button);
+  const led = mesh(new THREE.SphereGeometry(0.006, 16, 8), M.led, [0.57, HY - 0.03, capTop + 0.001]);
+
+  const clamps = [];
+  [-0.40, 0, 0.40].forEach(x => {
+    clamps.push(box([0.05, 0.040, 0.006], [x, L - 0.010, FT + 0.003], M.steel));
+    clamps.push(box([0.05, 0.008, 0.046], [x, L + 0.008, -0.013], M.steel));
+    clamps.push(box([0.05, 0.034, 0.006], [x, L - 0.013, FB - 0.003], M.steel));
+  });
+
+  const SX = W / 2 - 0.02, SY = 0.025;
+  const sensor = [
+    box([0.05, 0.035, 0.018], [SX, SY, FT + 0.009], M.housing, 0.005),
+    cyl(0.009, 0.003, [SX, SY, FT + 0.019], M.dark)
+  ];
+
+  const PMX = 0.45, PMY = L - 0.30;
+  const powerModule = box([0.14, 0.09, 0.045], [PMX, PMY, -0.055], M.cap, 0.008);
+
+  const side = W / 2 + 0.008;
+  const cables = [
+    cable([[0.03, L - 0.22, -0.04], [0.2, L - 0.26, -0.05], [PMX - 0.07, PMY, -0.055]], 0.004),
+    cable([[PMX + 0.07, PMY, -0.05], [side, L - 0.20, -0.035], [side, L + 0.02, -0.03], [0.57, HY, HZ - 0.06]], 0.004),
+    cable([[SX + 0.02, SY, FT + 0.005], [side, SY + 0.03, -0.012], [side, L - 0.10, -0.014], [side, L + 0.03, -0.03], [0.575, HY + 0.02, HZ - 0.06]], 0.0025)
+  ];
+
+  // ---------- legs and roof ----------
+  const legGeo = new THREE.BoxGeometry(0.04, 0.04, 1);
+  const legs = [[-0.35, 0.2], [0.35, 0.2], [-0.35, L - 0.2], [0.35, L - 0.2]].map(([x, yl]) => {
+    const m = mesh(legGeo, M.alu, [x, 0, 0], world);
+    m.userData = { x, yl };
+    return m;
+  });
+  const roof = mesh(new THREE.BoxGeometry(6, 6, 0.1), M.roof, [0, 0.8, -0.05], world);
+  roof.castShadow = false;
+
+  function setTilt(deg) {
+    const t = THREE.MathUtils.degToRad(deg);
+    rig.rotation.x = t;
+    const rb = railZ - 0.02;
+    legs.forEach(m => {
+      const { x, yl } = m.userData;
+      const yw = yl * Math.cos(t) - rb * Math.sin(t);
+      const zw = H0 + yl * Math.sin(t) + rb * Math.cos(t);
+      m.scale.z = zw;
+      m.position.set(x, yw, zw / 2);
+    });
+  }
+  setTilt(15);
+
+  // ---------- parts, labels, selection ----------
+  const PARTS = [
+    { id: "housing", name: "Cleaning module housing", meshes: [housing], anchor: [-0.2, HY, HZ + 0.05],
+      info: "Closed housing clamped along the panel's top edge. It sits beyond the frame, off the glass, so it never shades the cells." },
+    { id: "drive", name: "Drive end cap", meshes: [driveCap, button, led], anchor: [0.57, HY, HZ + 0.06],
+      info: "Carries the manual clean button (red) and the status light (green)." },
+    { id: "clamps", name: "Frame clamps", meshes: clamps, anchor: [0.0, L, FT + 0.01],
+      info: "Grip the existing panel frame. No drilling and no changes to the panel." },
+    { id: "sensor", name: "Dust sensor", meshes: sensor, anchor: [SX, SY, FT + 0.03],
+      info: "Watches how much dust has built up on the glass and tells the unit when a clean is needed." },
+    { id: "power", name: "Power module", meshes: [powerModule], anchor: [PMX, PMY, -0.03],
+      info: "Charge controller and LiFePO4 buffer battery, charged from the panel's own output." },
+    { id: "panel", name: "Solar panel (existing)", meshes: panelMeshes, anchor: [-0.3, L * 0.45, 0.01],
+      info: "A standard residential panel. AutoRoller retrofits onto it without modification." }
+  ];
+
+  const labelsEl = document.getElementById("labels");
+  const partsEl = document.getElementById("parts");
+  const infoEl = document.getElementById("part-info");
+  let selected = null;
+
+  PARTS.forEach(p => {
+    p.label = document.createElement("div");
+    p.label.className = "label";
+    p.label.textContent = p.name;
+    labelsEl.appendChild(p.label);
+    const li = document.createElement("li");
+    p.btn = document.createElement("button");
+    p.btn.textContent = p.name;
+    p.btn.setAttribute("aria-pressed", "false");
+    p.btn.addEventListener("click", () => select(selected === p ? null : p));
+    li.appendChild(p.btn);
+    partsEl.appendChild(li);
+    p.meshes.forEach(m => {
+      m.material = m.material.clone();
+      m.userData.baseEmissive = m.material.emissive.getHex();
+      m.userData.baseIntensity = m.material.emissiveIntensity;
+    });
+  });
+
+  const highlight = new THREE.Color(0x3d8bd9);
+  function select(p) {
+    PARTS.forEach(q => {
+      const on = q === p;
+      q.btn.setAttribute("aria-pressed", String(on));
+      q.label.classList.toggle("is-selected", on);
+      q.meshes.forEach(m => {
+        if (on) { m.material.emissive.copy(highlight); m.material.emissiveIntensity = 0.45; }
+        else { m.material.emissive.setHex(m.userData.baseEmissive); m.material.emissiveIntensity = m.userData.baseIntensity; }
+      });
+    });
+    selected = p;
+    infoEl.hidden = !p;
+    if (p) infoEl.textContent = p.info;
+  }
+
+  const v = new THREE.Vector3();
+  function placeLabels() {
+    const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
+    PARTS.forEach(p => {
+      v.set(p.anchor[0], p.anchor[1], p.anchor[2]);
+      rig.localToWorld(v);
+      v.project(camera);
+      const visible = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
+      p.label.style.display = visible ? "block" : "none";
+      p.label.style.left = ((v.x + 1) / 2 * w) + "px";
+      p.label.style.top = ((1 - v.y) / 2 * h) + "px";
+    });
+  }
+
+  // ---------- views (three.js Y-up coordinates) ----------
+  const VIEWS = {
+    hero:  { pos: [2.3, 1.75, 1.7],  target: [0, 0.55, -0.85] },
+    close: { pos: [1.2, 1.4, -1.0],  target: [0.45, 0.8, -1.62] },
+    side:  { pos: [3.0, 0.7, -0.8],  target: [0, 0.55, -0.8] },
+    back:  { pos: [0.9, 1.3, -3.6],  target: [0, 0.45, -0.9] }
+  };
+  let tween = null;
+  function goTo(name) {
+    const view = VIEWS[name];
+    const toPos = new THREE.Vector3(...view.pos), toTgt = new THREE.Vector3(...view.target);
+    if (reduceMotion) { camera.position.copy(toPos); controls.target.copy(toTgt); return; }
+    tween = { fromPos: camera.position.clone(), fromTgt: controls.target.clone(), toPos, toTgt, t: 0 };
+  }
+  camera.position.set(...VIEWS.hero.pos);
+  controls.target.set(...VIEWS.hero.target);
+  document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => goTo(b.dataset.view)));
+
+  // ---------- display options ----------
+  const tiltIn = document.getElementById("tilt"), tiltOut = document.getElementById("tilt-out");
+  tiltIn.addEventListener("input", () => { setTilt(+tiltIn.value); tiltOut.textContent = tiltIn.value + "°"; });
+  const optLabels = document.getElementById("opt-labels");
+  optLabels.addEventListener("change", () => document.body.classList.toggle("no-labels", !optLabels.checked));
+  const optPlain = document.getElementById("opt-plain");
+  function applyBackground() {
+    const css = getComputedStyle(document.documentElement).getPropertyValue("--scene").trim() || "#dde6ee";
+    const col = optPlain.checked ? "#ffffff" : css;
+    scene.background = new THREE.Color(col);
+    document.body.style.background = col;
+    roof.visible = !optPlain.checked;
+  }
+  optPlain.addEventListener("change", applyBackground);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyBackground);
+  new MutationObserver(applyBackground).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  applyBackground();
+  const optSpin = document.getElementById("opt-spin");
+  optSpin.addEventListener("change", () => { controls.autoRotate = optSpin.checked; });
+
+  function setUI(hidden) {
+    document.body.classList.toggle("ui-hidden", hidden);
+    if (!hidden) document.getElementById("hide-ui").focus();
+  }
+  document.getElementById("hide-ui").addEventListener("click", () => setUI(true));
+  document.getElementById("show-ui").addEventListener("click", () => setUI(false));
+  window.addEventListener("keydown", e => {
+    if ((e.key === "h" || e.key === "H") && !e.target.matches("input, textarea")) setUI(!document.body.classList.contains("ui-hidden"));
+  });
+
+  // ---------- loop ----------
+  function resize() {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function frame() {
+    if (tween) {
+      tween.t = Math.min(1, tween.t + 0.035);
+      const e = tween.t < 0.5 ? 2 * tween.t * tween.t : 1 - Math.pow(-2 * tween.t + 2, 2) / 2;
+      camera.position.lerpVectors(tween.fromPos, tween.toPos, e);
+      controls.target.lerpVectors(tween.fromTgt, tween.toTgt, e);
+      if (tween.t >= 1) tween = null;
+    }
+    controls.update();
+    renderer.render(scene, camera);
+    placeLabels();
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>
+</body>
+</html>
